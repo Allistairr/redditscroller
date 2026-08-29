@@ -1017,41 +1017,19 @@
     }
 
     /**
-     * Extract media URL from a post
-     */
-    function getMediaUrl(post) {
-      const data = post.data || post;
-      const url = data.url || '';
+         * Extract media URL from a post
+         */
+        function getMediaUrl(post) {
+          const data = post.data || post;
+          const url = data.url || '';
       
-      // Handle Reddit gallery
-      if (url.includes('gallery')) {
-        const preview = data.preview?.images?.[0]?.source;
-        if (preview) return preview.url.replace(/&amp;/g, '&');
-      }
+          // For Hacker News, return the URL directly (could be image or article)
+          if (url) {
+            return url;
+          }
       
-      // Handle imgur gallery
-      if (url.includes('imgur.com') && !url.includes('.jpg') && !url.includes('.png')) {
-        return url.replace(/\/$/, '') + '.jpg';
-      }
-      
-      // HandleReddit media
-      if (url.includes('reddit.com/media')) {
-        return url.replace('reddit.com/media', 'i.reddit.com/media');
-      }
-      
-      // Handle redditgifts
-      if (url.includes('redditgifts')) {
-        return url + '?format=jpg&width=640&height=640&fit=bounds';
-      }
-      
-      // Check post preview for better media
-      if (data.preview && data.preview.images && data.preview.images.length > 0) {
-        const source = data.preview.images[0].source;
-        if (source) return source.url.replace(/&amp;/g, '&');
-      }
-      
-      return url;
-    }
+          return null;
+        }
 
     /**
      * Determine media type
@@ -1060,9 +1038,7 @@
       const data = post.data || post;
       const url = (data.url || '').toLowerCase();
       
-      if (url.includes('.gif')) return 'gif';
-      if (url.includes('gallery')) return 'gallery';
-      if (url.includes('.mp4') || url.includes('.webm') || url.includes('.mov')) return 'video';
+      // For Hacker News, return 'image' for all URLs (media rendering is handled by browser)
       return 'image';
     }
 
@@ -1309,8 +1285,13 @@
         const id = getPostId(post);
         const mediaUrl = getMediaUrl(post);
         const title = formatTitle(post);
-        const subreddit = data.subreddit || 'unknown';
-        const postUrl = `https://www.reddit.com${data.permalink}`;
+        const isHackerNews = !data.subreddit;
+        const subreddit = isHackerNews ? 'news' : (data.subreddit || 'unknown');
+        // For Hacker News, use the story URL as both media and source
+        // For Reddit, use the permalink
+        const postUrl = isHackerNews 
+          ? (data.url ? `https://news.ycombinator.com/item?id=${data.id}` : `https://news.ycombinator.com`)
+          : `https://www.reddit.com${data.permalink}`;
         const mediaType = getMediaType(post);
         const nsfw = isNSFW(post);
         
