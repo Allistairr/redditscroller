@@ -822,8 +822,9 @@
       systemPrefersDark: window.matchMedia('(prefers-color-scheme: dark)').matches,
       
       // Proxy configuration (set to null to disable proxy)
-      // Example: 'https://cors-anywhere.herokuapp.com/'
-      proxy: null,
+      // Using AllOrigins as default CORS proxy (https://allorigins.win)
+      // This allows the app to work when opened directly in a browser
+      proxy: 'https://api.allorigins.win/get?url=',
       
       // For debouncing
       resizeTimeout: null,
@@ -1054,9 +1055,9 @@
       }
     };
 
-    // ==========================================
+    // =========================================
     // FEED FETCHING
-    // ==========================================
+    // =========================================
     const FeedFetcher = {
       /**
        * Fetch posts from Reddit API
@@ -1081,12 +1082,14 @@
         }
         
         // Apply proxy if configured
+        let finalUrl = url;
         if (AppState.proxy) {
-          url = AppState.proxy + encodeURIComponent(url);
+          // AllOrigins format: https://api.allorigins.win/get?url={encodedUrl}
+          finalUrl = AppState.proxy + encodeURIComponent(url);
         }
         
         try {
-          const response = await fetch(url, {
+          const response = await fetch(finalUrl, {
             method: 'GET',
             headers: {
               'User-Agent': 'RedditScroller/1.0'
@@ -1097,7 +1100,16 @@
             throw new Error(`HTTP ${response.status}: ${response.statusText}`);
           }
           
-          const data = await response.json();
+          let data = await response.json();
+          
+          // Handle AllOrigins response format - actual content is in data.contents
+          if (AppState.proxy && data.contents) {
+            try {
+              data = JSON.parse(data.contents);
+            } catch (parseError) {
+              console.warn('Could not parse proxy response as JSON');
+            }
+          }
           
           if (!data.data || !Array.isArray(data.data.children)) {
             throw new Error('Invalid feed format');
