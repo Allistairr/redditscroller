@@ -3,11 +3,11 @@
 <head>
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
-  <title>Reddit Scroller — Visual Reddit Browser</title>
-  <meta name="description" content="Modern visual Reddit browser with endless scrolling">
+  <title>Hacker News Scroller — Visual Hacker News Browser</title>
+  <meta name="description" content="Modern visual Hacker News browser with endless scrolling">
   <style>
     /* ==========================================
-       REDDIT SCROLLER — Modern Visual Browser
+       HACKER NEWS SCROLLER — Modern Visual Browser
        ========================================== */
 
     /* --- CSS Variables & Theme System --- */
@@ -907,10 +907,10 @@
       // Theme detection
       systemPrefersDark: window.matchMedia('(prefers-color-scheme: dark)').matches,
       
-      // Proxy configuration (set to null to disable proxy)
-      // Using corsproxy.com for CORS access to Reddit API
-      // This allows the app to work when opened directly in a browser
-      proxy: 'https://www.corsproxy.com/?',
+      // Proxy configuration
+      // Using local proxy server to avoid CORS issues with Reddit API
+      // Run: node server.js, then visit http://localhost:3000
+      proxy: null, // Set to 'http://localhost:3000/api/' to use local proxy
       
       // For debouncing
       resizeTimeout: null,
@@ -1145,37 +1145,34 @@
     // FEED FETCHING
     // =========================================
     const FeedFetcher = {
-      /**
-       * Fetch posts from Reddit API
+      /**`
+       * Fetch posts from Hacker News API (CORS-friendly)
        */
       async fetchPosts(subreddit, sort, after = null, nsfw = false) {
-        let url = `https://www.reddit.com/r/${subreddit}/${sort}.json`;
-        
-        if (after) {
-          url += `?after=${after}`;
-        } else {
-          url += '?limit=25';
+        // Map sort to Hacker News endpoint
+        // ForHN: hn-sort maps directly to hn-api endpoints
+        let endpoint = 'new';
+        if (sort === 'top') {
+          endpoint = 'top';
+        } else if (sort === 'best') {
+          endpoint = 'best';
         }
         
-        // Add raw_json parameter for cleaner JSON
-        if (!after) {
-          url += '&raw_json=1';
+        // For 'hot' - use new (HN doesn't have true hot, new is closest)
+        if (sort === 'hot') {
+          endpoint = 'new';
         }
         
-        // For NSFW content
-        if (nsfw) {
-          url += (after ? '&' : '?') + 'include_over_18=true';
+        // For 'rising' - use new with time filter (approximate)
+        if (sort === 'rising') {
+          endpoint = 'new';
         }
         
-        // Apply proxy if configured
-        let finalUrl = url;
-        if (AppState.proxy) {
-          // AllOrigins format: https://api.allorigins.win/get?url={encodedUrl}
-          finalUrl = AppState.proxy + encodeURIComponent(url);
-        }
+        // Get story IDs from the endpoint
+        let url = `https://hacker-news.firebaseio.com/v0/${endpoint}stories.json`;
         
         try {
-          const response = await fetch(finalUrl, {
+          const response = await fetch(url, {
             method: 'GET',
             headers: {
               'User-Agent': 'RedditScroller/1.0'
@@ -1186,23 +1183,37 @@
             throw new Error(`HTTP ${response.status}: ${response.statusText}`);
           }
           
-          let data = await response.json();
+          const storyIds = await response.json();
           
-          // Handle AllOrigins response format - actual content is in data.contents
-          if (AppState.proxy && data.contents) {
-            try {
-              data = JSON.parse(data.contents);
-            } catch (parseError) {
-              console.warn('Could not parse proxy response as JSON');
-            }
-          }
+          // Get full story details for the first 25 stories
+          const limit = 25;
+          const storiesToFetch = storyIds.slice(0, limit);
           
-          if (!data.data || !Array.isArray(data.data.children)) {
-            throw new Error('Invalid feed format');
-          }
+          // Fetch story details in parallel
+          const storyPromises = storiesToFetch.map(id => 
+            fetch(`https://hacker-news.firebaseio.com/v0/item/${id}.json`)
+              .then(res => res.json())
+              .catch(() => null)
+          );
           
-          const posts = data.data.children.filter(child => child.data);
-          const newAfter = data.data.after;
+          const posts = (await Promise.all(storyPromises))
+            .filter(post => post && post.type === 'story' && post.url)
+            .map(post => ({
+              data: {
+                title: post.title || 'No title',
+                url: post.url,
+                domain: this.extractDomain(post.url),
+                score: post.score || 0,
+                comments: post.descendants || 0,
+                author: post.by || 'anonymous',
+                created: post.time || 0,
+                id: post.id || '',
+                type: 'story'
+              }
+            }));
+          
+          // Generate 'after' token for pagination
+          const newAfter = storyIds[storiesToFetch.length - 1] || null;
           
           return {
             posts,
@@ -1215,6 +1226,16 @@
         }
       },
       
+      // Helper to extract domain from URL
+      extractDomain(url) {
+        try {
+          const parsed = new URL(url);
+          return parsed.hostname.replace('www.', '');
+        } catch {
+          return 'hackernews';
+        }
+      },
+      
       /**
        * Handle fetch errors gracefully
        */
@@ -1222,17 +1243,13 @@
         let message = 'Failed to load feed';
         
         if (error.message.includes('403')) {
-          message = '403 Forbidden - Check if the subreddit exists';
+          message = '403 Forbidden - Access denied';
         } else if (error.message.includes('404')) {
-          message = 'Subreddit not found';
-        } else if (error.message.includes('429')) {
-          message = 'Rate limited by Reddit. Try again later.';
+          message = 'Resource not found';
         } else if (error.message.includes('NetworkError')) {
           message = 'Network error - Check your connection';
         } else if (error.message.includes('JSON')) {
           message = 'Could not parse feed data';
-        } else if (AppState.proxy) {
-          message = `Proxy error. Try disabling proxy in code.`;
         }
         
         DOM.statusText.textContent = message;

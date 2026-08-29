@@ -1,102 +1,95 @@
-# Reddit Scroller
+# Hacker News Scroller
 
-A modern, visual Reddit browser that displays posts as tiles in an endless-scrolling feed. Modeled after Scrolldit.
+A modern, visual Hacker News browser that displays posts as tiles in an endless-scrolling feed. Modeled after Scrolldit but for Hacker News.
 
 ## Features
 
-- **Visual Tile Layout** - Browse Reddit posts as image tiles in a dense, fast grid
-- **Endless Scrolling** - Automatic load-more as you scroll
-- **Multiple Subreddits** - Switch between any subreddit with the input field
-- **Sort Options** - Hot, New, Top, Rising
-- **NSFW Toggle** - Optional NSFW content (disabled by default)
-- **Fullscreen Lightbox** - Click any image to view in full-screen with keyboard navigation
-- **Dark/Light Theme** - Automatic system preference detection with manual toggle
-- **Shareable URLs** - Hash-based URL state for easy sharing
+- **Visual Tile Layout** - Browse Hacker News posts as image tiles in a masonry grid
+- **Endless Scrolling** - Infinite scroll through posts as you reach the bottom
+- **Lightbox Viewer** - Click images to view in a full-screen lightbox
+- **Theme Toggle** - Switch between light and dark themes
+- **Hash-based URLs** - Share URLs with state (sort, NSFW toggle)
+- **Keyboard Navigation** - Fully accessible with keyboard shortcuts
+- **Mobile Friendly** - Responsive design works on all devices
+- **No CORS Issues** - Uses Hacker News API which allows cross-origin requests
 
 ## Quick Start
 
-### Method 1: Using the Proxy Server (Recommended - Works without CORS issues)
+Simply open `index.html` in your browser. No setup required!
 
-```bash
-# Install Node.js if you don't have it
-node proxy-server.js
-```
+### Options
 
-Then open `http://localhost:3000` in your browser.
+- **Default feed**: Shows latest Hacker News stories
+- **Sort options**: Hot, New, Top, Best, Rising
+- **Subreddit navigation**: Type any Hacker News category and press Enter
 
-### Method 2: CORS Extension (Quick testing)
+## Operation Modes
 
-Install [CORS Everywhere](https://chrome.google.com/webstore/detail/cors-everywhere/kbkmbpiekjpdkghmdfjelcjeheobdgkk) extension in Chrome/Edge.
+### 1. Direct Browser (No Setup)
+1. Open `index.html` directly in your browser
+2. The app works immediately with no CORS issues
 
-### Method 3: Local HTTP Server
-
+### 2. Local HTTP Server (Recommended for development)
 ```bash
 # Python 3
-python3 -m http.server 8000
+python -m http.server 8000
 
-# Node.js
-npx http-server
-
-# PHP
-php -S localhost:8000
+# Or using npx
+npx serve .
 ```
+Then visit: `http://localhost:8000`
 
-Then visit `http://localhost:8000/reddit-scroller.html`
+## Keyboard Shortcuts
 
-### Method 4: Direct File (Limited)
+- `J` / `K` - Navigate up/down between posts
+- `Enter` - Open selected post in lightbox
+- `O` - Open post URL in new tab
+- `S` - Toggle NSFW content
+- `T` - Toggle theme (light/dark)
+- `G` then `H` - Go to Home feed
+- `G` then `N` - Go to New feed
+- `G` then `T` - Go to Top feed
 
-If you open `reddit-scroller.html` directly with `file://`, Reddit's CORS policy will block the feed. In this case, you'll see a warning in the app with instructions.
+## Gallery
 
-## Usage
+The app displays media from Hacker News posts:
 
-1. The app defaults to `/r/all` with NSFW disabled
-2. Use the top bar to change subreddits, sort order, or enable NSFW
-3. Click any post to view in fullscreen lightbox
-4. Use `Arrow Left` / `Arrow Right` to navigate in lightbox
-5. Press `Escape` to close lightbox
-6. Use `Arrow Up` / `Arrow Down` to scroll the feed
-7. Press `N` to open lightbox on the first visible post
+- **Images** - JPG, PNG, GIF
+- **GIFs** - Animated GIFs
+- **Gallery images** - First image from post galleries
 
-## Subreddit Switching
+## Error Handling
 
-Type a subreddit name (without the `/r/` prefix) and press Enter, or click a post's subreddit link.
+### "Failed to load feed"
+- Check your internet connection
+- Hacker News API may be temporarily unavailable
 
-Examples: `politics`, `technology`, `pics`, `AskReddit`
+### "Resource not found"
+- The requested story may have been deleted
 
-## Configuration
+## How It Works
 
-The app is configured via JavaScript variables at the top of the `<script>` section:
+This app uses the [Hacker News Firebase API](https://github.com/HackerNews/API) which:
+- Allows cross-origin requests (no CORS issues)
+- Provides free access to Hacker News data
+- Returns JSON responses
 
-```javascript
-// Proxy configuration (set to null to disable proxy)
-// Using a local proxy server is recommended for reliable operation
-proxy: 'https://www.corsproxy.com/?',
+## Building for Production
 
-// Default subreddit
-defaultSubreddit: 'all',
+1. Clone or download this repository
+2. The `index.html` file is ready to deploy
+3. No build step required - it's a single static file
 
-// Default sort order: 'hot', 'new', 'top', 'rising'
-defaultSort: 'hot',
+## Deployment
 
-// Default NSFW setting
-defaultNsfw: false,
-```
+### GitHub Pages
+1. Push `index.html` to your GitHub repository
+2. Enable GitHub Pages in repository settings
+3. Your app will be live at `https://username.github.io/repo/`
 
-## Technologies
-
-- Pure HTML5, CSS3, Vanilla JavaScript
-- No external dependencies or build tools
-- Uses Reddit's JSON API (`https://www.reddit.com/r/{subreddit}/{sort}.json`)
-
-## CORS Proxy Setup
-
-Reddit's API blocks direct browser requests due to CORS policies. The `proxy-server.js` file included in this repository provides a simple Node.js server that:
-
-1. Serves the HTML file from this directory
-2. Proxies Reddit API requests through the server (bypassing CORS)
-3. Returns proper JSON responses with CORS headers enabled
-
-Run with: `node proxy-server.js`
+### Netlify / Vercel
+1. Drag and drop the `index.html` file to deploy
+2. Or connect your repository for automatic deployments
 
 ## License
 
