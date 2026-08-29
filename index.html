@@ -1125,6 +1125,8 @@
        * Fetch posts from Hacker News API (CORS-friendly)
        */
       async fetchPosts(subreddit, sort, after = null, nsfw = false) {
+        console.log('[Hacker News] fetchPosts called:', { subreddit, sort, after });
+        
         // Map sort to Hacker News endpoint
         // ForHN: hn-sort maps directly to hn-api endpoints
         let endpoint = 'new';
@@ -1146,6 +1148,7 @@
         
         // Get story IDs from the endpoint
         let url = `https://hacker-news.firebaseio.com/v0/${endpoint}stories.json`;
+        console.log('[Hacker News] Fetching:', url);
         
         try {
           const response = await fetch(url, {
