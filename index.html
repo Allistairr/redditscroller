@@ -1038,19 +1038,19 @@
           const data = post.data || post;
           const url = data.url || '';
 
-          // For Reddit, only return URLs that are likely images
           // Check if URL ends with image extension or is from an image host
           if (url) {
             const lowerUrl = url.toLowerCase();
             const imageExtensions = ['.jpg', '.jpeg', '.png', '.gif', '.webp', '.bmp', '.svg'];
-            const imageHosts = ['imgur.com', 'flickr.com', 'photobucket.com', 'tinypic.com', 'img.ly', 'goo.gl'];
+            const imageHosts = ['imgur.com', 'flickr.com', 'photobucket.com', 'tinypic.com', 'img.ly', 'goo.gl', 'i.imgur.com'];
 
             // Check if it's an image URL
             const hasImageExtension = imageExtensions.some(ext => lowerUrl.endsWith(ext));
             const isImageHost = imageHosts.some(host => lowerUrl.includes(host));
 
             if (hasImageExtension || isImageHost) {
-              return url;
+              // Return proxied URL to avoid CORS issues
+              return `https://images.weserv.nl/?url=${encodeURIComponent(url)}&w=600&fit=cover`;
             }
           }
 

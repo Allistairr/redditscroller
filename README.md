@@ -1,17 +1,18 @@
 # Reddit Scroller
 
-A modern, visual Reddit browser that displays posts as tiles in an endless-scrolling feed.
+A modern, visual browser that displays posts as tiles in an endless-scrolling feed.
 
 ## Features
 
-- **Visual Tile Layout** - Browse Reddit posts as image tiles in a masonry grid
+- **Visual Tile Layout** - Browse posts as image tiles in a masonry grid
 - **Endless Scrolling** - Infinite scroll through posts as you reach the bottom
 - **Lightbox Viewer** - Click images to view in a full-screen lightbox
 - **Theme Toggle** - Switch between light and dark themes
-- **Hash-based URLs** - Share URLs with state (subreddit, sort, NSFW toggle, columns)
+- **Hash-based URLs** - Share URLs with state (sort, NSFW toggle, columns)
 - **Keyboard Navigation** - Fully accessible with keyboard shortcuts
 - **Mobile Friendly** - Responsive design works on all devices
-- **No CORS Issues** - Uses Reddit API which allows cross-origin requests
+- **Zero CORS** - Images served through a proxy that avoids CORS issues
+- **No Plugins/Signups** - Just open the file and use it
 - **Configurable Columns** - Choose 2-5 columns for the grid layout
 
 ## Quick Start
@@ -20,16 +21,15 @@ Simply open `index.html` in your browser. No setup required!
 
 ### Options
 
-- **Default feed**: Shows latest Reddit posts
+- **Default feed**: Shows latest posts
 - **Sort options**: Hot, New, Top, Rising
-- **Subreddit navigation**: Type any subreddit and press Enter
 - **Columns**: Select 2-5 columns from the dropdown
 
 ## Operation Modes
 
 ### 1. Direct Browser (No Setup)
 1. Open `index.html` directly in your browser
-2. The app works immediately with no CORS issues
+2. The app works immediately with zero CORS issues
 
 ### 2. Local HTTP Server (Recommended for development)
 ```bash
@@ -54,7 +54,7 @@ Then visit: `http://localhost:8000`
 
 ## Gallery
 
-The app displays media from Reddit posts:
+The app displays media from posts:
 
 - **Images** - JPG, PNG, GIF, WebP
 - **GIFs** - Animated GIFs
@@ -64,20 +64,25 @@ The app displays media from Reddit posts:
 
 ### "Failed to load feed"
 - Check your internet connection
-- Reddit API may be temporarily unavailable
+- API may be temporarily unavailable
 
 ### "Resource not found"
-- The requested subreddit or post may not exist
+- The requested post may not exist
 
 ### "No visual posts found"
-- The subreddit may only contain text-only posts (no images)
+- The feed may only contain text-only posts (no images)
 
 ## How It Works
 
-This app uses the [Reddit API](https://www.reddit.com/dev/api/) which:
-- Allows cross-origin requests (no CORS issues)
-- Provides free access to Reddit data
+This app uses the Hacker News API which:
+- Allows cross-origin requests (zero CORS issues)
+- Provides free access to data
 - Returns JSON responses
+
+Images are served through `images.weserv.nl` - a free, CORS-friendly image proxy that:
+- No API key required
+- No signup required
+- Handles all image resizing and optimization
 
 ## Building for Production
 
