@@ -347,92 +347,6 @@
       color: white;
     }
 
-    /* CORS Warning Overlay */
-    .cors-warning {
-      position: fixed;
-      top: 0;
-      left: 0;
-      right: 0;
-      bottom: 0;
-      background: rgba(0, 0, 0, 0.85);
-      z-index: 10000;
-      display: flex;
-      align-items: center;
-      justify-content: center;
-      padding: 20px;
-      animation: fadeIn 0.3s ease-out;
-    }
-
-    .cors-warning-content {
-      background: var(--card-bg);
-      border-radius: 12px;
-      padding: 30px;
-      max-width: 600px;
-      width: 100%;
-      box-shadow: 0 8px 32px rgba(0, 0, 0, 0.3);
-      border: 1px solid var(--border-color);
-    }
-
-    .cors-warning-content h3 {
-      color: var(--text-primary);
-      margin: 0 0 15px 0;
-      display: flex;
-      align-items: center;
-      gap: 10px;
-    }
-
-    .cors-warning-content p {
-      color: var(--text-secondary);
-      margin: 0 0 20px 0;
-      line-height: 1.6;
-    }
-
-    .cors-warning-content ul {
-      margin: 0 0 25px 0;
-      padding-left: 25px;
-    }
-
-    .cors-warning-content li {
-      color: var(--text-secondary);
-      margin-bottom: 10px;
-      line-height: 1.5;
-    }
-
-    .cors-warning-content li a {
-      color: var(--accent);
-      text-decoration: none;
-    }
-
-    .cors-warning-content li a:hover {
-      text-decoration: underline;
-    }
-
-    .cors-warning-content code {
-      background: var(--bg-secondary);
-      padding: 2px 6px;
-      border-radius: 4px;
-      font-family: monospace;
-      font-size: 13px;
-      color: var(--accent);
-    }
-
-    .cors-warning-content button {
-      background: var(--accent);
-      color: white;
-      border: none;
-      padding: 12px 24px;
-      border-radius: 6px;
-      font-size: 14px;
-      font-weight: 600;
-      cursor: pointer;
-      transition: background 0.2s;
-      width: 100%;
-    }
-
-    .cors-warning-content button:hover {
-      background: var(--accent-hover);
-    }
-
     .badge-video {
       background: #1a73e8;
       color: white;
@@ -1335,8 +1249,7 @@
         const mediaType = getMediaType(post);
         const nsfw = isNSFW(post);
         
-        // Check if we should skip this post
-        if (!mediaUrl) return null;
+        // Don't skip posts without images - render them with placeholder
         if (nsfw && !AppState.nsfw) return null;
         
         const tile = document.createElement('article');
@@ -1374,18 +1287,24 @@
         
         // Preload image for better UX
         const preloadImg = new Image();
-        preloadImg.onload = () => {
-          if (img.parentNode) {
-            img.src = mediaUrl;
+        if (mediaUrl) {
+          preloadImg.onload = () => {
+            if (img.parentNode) {
+              img.src = mediaUrl;
+              img.classList.remove('placeholder');
+              img.style.objectFit = this.getFitMode(post, mediaUrl);
+            }
+          };
+          preloadImg.onerror = () => {
             img.classList.remove('placeholder');
-            img.style.objectFit = this.getFitMode(post, mediaUrl);
-          }
-        };
-        preloadImg.onerror = () => {
+            img.src = 'data:image/svg+xml;base64,PHN2ZyB4bWxucz0iaHR0cDovL3d3dy53My5vcmcvMjAwMC9zdmciIHdpZHRoPSIyMDAiIGhlaWdodD0iMjAwIiB2aWV3Qm94PSIwIDAgMjAwIDIwMCI+CiAgPHJlY3Qgd2lkdGg9IjIwMCIgaGVpZ2h0PSIyMDAiIGZpbGw9IiMzZjNmNDYiLz4KICA8dGV4dCB4PSI1MCUiIHk9IjUwJSIgZG9taW5hbnQtYmFzZWxpbmU9Im1pZGRsZSIgdGV4dC1hbmNob3I9Im1pZGRsZSIgZmlsbD0iIzc5NzE3YWMgZm9udC1mYW1pbHk9ImFyaWFsIiBmb250LXNpemU9IjI0Ij5WaWRlby9JbWFnZSBsb2FkIGVycm9yPC90ZXh0Pgo8L3N2Zz4='; // Fallback image
+          };
+          preloadImg.src = mediaUrl;
+        } else {
+          // No image URL - use placeholder
+          img.src = 'data:image/svg+xml;base64,PHN2ZyB4bWxucz0iaHR0cDovL3d3dy53My5vcmcvMjAwMC9zdmciIHdpZHRoPSIyMDAiIGhlaWdodD0iMjAwIiB2aWV3Qm94PSIwIDAgMjAwIDIwMCI+CiAgPHJlY3Qgd2lkdGg9IjIwMCIgaGVpZ2h0PSIyMDAiIGZpbGw9IiM0NDQwNDAiLz4KICA8dGV4dCB4PSI1MCUiIHk9IjUwJSIgZG9taW5hbnQtYmFzZWxpbmU9Im1pZGRsZSIgdGV4dC1hbmNob3I9Im1pZGRsZSIgZmlsbD0iIzg4ODA4OCIgZm9udC1mYW1pbHk9ImFyaWFsIiBmb250LXNpemU9IjIwIj5BcnRpY2xlPC90ZXh0Pgo8L3N2Zz4='; // Placeholder for text-only posts
           img.classList.remove('placeholder');
-          img.src = 'data:image/svg+xml;base64,PHN2ZyB4bWxucz0iaHR0cDovL3d3dy53My5vcmcvMjAwMC9zdmciIHdpZHRoPSIyMDAiIGhlaWdodD0iMjAwIiB2aWV3Qm94PSIwIDAgMjAwIDIwMCI+CiAgPHJlY3Qgd2lkdGg9IjIwMCIgaGVpZ2h0PSIyMDAiIGZpbGw9IiMzZjNmNDYiLz4KICA8dGV4dCB4PSI1MCUiIHk9IjUwJSIgZG9taW5hbnQtYmFzZWxpbmU9Im1pZGRsZSIgdGV4dC1hbmNob3I9Im1pZGRsZSIgZmlsbD0iIzc5NzE3YWMgZm9udC1mYW1pbHk9ImFyaWFsIiBmb250LXNpemU9IjI0Ij5WaWRlby9JbWFnZSBsb2FkIGVycm9yPC90ZXh0Pgo8L3N2Zz4='; // Fallback image
-        };
-        preloadImg.src = mediaUrl;
+        }
         
         // Click handler for lightbox
         tile.addEventListener('click', (e) => {
@@ -2017,44 +1936,10 @@
 
     };
 
-    // Show CORS warning if feed fails to load
-    const showCORSWarning = () => {
-      // Only show warning once
-      if (localStorage.getItem('reddit-scroller-cors-warning-shown')) return;
-      
-      const warningDiv = document.createElement('div');
-      warningDiv.id = 'corsWarning';
-      warningDiv.className = 'cors-warning';
-      warningDiv.innerHTML = `
-        <div class="cors-warning-content">
-          <h3>⚠️ CORS Issue Detected</h3>
-          <p>Reddit's API blocks direct browser requests. To use this app, you have a few options:</p>
-          <ul>
-            <li><strong>Install a CORS extension:</strong> <a href="https://chrome.google.com/webstore/detail/cors-everywhere/kbkmbpiekjpdkghmdfjelcjeheobdgkk" target="_blank">CORS Everywhere</a> (Chrome/Edge)</li>
-            <li><strong>Use a local server:</strong> Run <code>python3 -m http.server 8000</code> and visit http://localhost:8000</li>
-            <li><strong>Configure a proxy:</strong> Edit this file and set a working proxy URL in the <code>proxy</code> variable</li>
-          </ul>
-          <button id="corsWarningClose">OK</button>
-        </div>
-      `;
-      document.body.appendChild(warningDiv);
-      
-      document.getElementById('corsWarningClose').addEventListener('click', () => {
-        document.body.removeChild(warningDiv);
-        localStorage.setItem('reddit-scroller-cors-warning-shown', 'true');
-      });
-    };
-
     // Initialize app when DOM is ready
     if (document.readyState === 'loading') {
       document.addEventListener('DOMContentLoaded', () => {
         App.init();
-        // Check if we need to show CORS warning after initial load attempt
-        setTimeout(() => {
-          if (AppState.posts.length === 0 && !AppState.loading) {
-            showCORSWarning();
-          }
-        }, 5000);
       });
     } else {
       App.init();
