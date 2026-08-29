@@ -1,17 +1,18 @@
-# Hacker News Scroller
+# Reddit Scroller
 
-A modern, visual Hacker News browser that displays posts as tiles in an endless-scrolling feed. Modeled after Scrolldit but for Hacker News.
+A modern, visual Reddit browser that displays posts as tiles in an endless-scrolling feed.
 
 ## Features
 
-- **Visual Tile Layout** - Browse Hacker News posts as image tiles in a masonry grid
+- **Visual Tile Layout** - Browse Reddit posts as image tiles in a masonry grid
 - **Endless Scrolling** - Infinite scroll through posts as you reach the bottom
 - **Lightbox Viewer** - Click images to view in a full-screen lightbox
 - **Theme Toggle** - Switch between light and dark themes
-- **Hash-based URLs** - Share URLs with state (sort, NSFW toggle)
+- **Hash-based URLs** - Share URLs with state (subreddit, sort, NSFW toggle, columns)
 - **Keyboard Navigation** - Fully accessible with keyboard shortcuts
 - **Mobile Friendly** - Responsive design works on all devices
-- **No CORS Issues** - Uses Hacker News API which allows cross-origin requests
+- **No CORS Issues** - Uses Reddit API which allows cross-origin requests
+- **Configurable Columns** - Choose 2-5 columns for the grid layout
 
 ## Quick Start
 
@@ -19,9 +20,10 @@ Simply open `index.html` in your browser. No setup required!
 
 ### Options
 
-- **Default feed**: Shows latest Hacker News stories
-- **Sort options**: Hot, New, Top, Best, Rising
-- **Subreddit navigation**: Type any Hacker News category and press Enter
+- **Default feed**: Shows latest Reddit posts
+- **Sort options**: Hot, New, Top, Rising
+- **Subreddit navigation**: Type any subreddit and press Enter
+- **Columns**: Select 2-5 columns from the dropdown
 
 ## Operation Modes
 
@@ -52,9 +54,9 @@ Then visit: `http://localhost:8000`
 
 ## Gallery
 
-The app displays media from Hacker News posts:
+The app displays media from Reddit posts:
 
-- **Images** - JPG, PNG, GIF
+- **Images** - JPG, PNG, GIF, WebP
 - **GIFs** - Animated GIFs
 - **Gallery images** - First image from post galleries
 
@@ -62,16 +64,19 @@ The app displays media from Hacker News posts:
 
 ### "Failed to load feed"
 - Check your internet connection
-- Hacker News API may be temporarily unavailable
+- Reddit API may be temporarily unavailable
 
 ### "Resource not found"
-- The requested story may have been deleted
+- The requested subreddit or post may not exist
+
+### "No visual posts found"
+- The subreddit may only contain text-only posts (no images)
 
 ## How It Works
 
-This app uses the [Hacker News Firebase API](https://github.com/HackerNews/API) which:
+This app uses the [Reddit API](https://www.reddit.com/dev/api/) which:
 - Allows cross-origin requests (no CORS issues)
-- Provides free access to Hacker News data
+- Provides free access to Reddit data
 - Returns JSON responses
 
 ## Building for Production

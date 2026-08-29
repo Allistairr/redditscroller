@@ -3,11 +3,11 @@
 <head>
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
-  <title>Hacker News Scroller — Visual Hacker News Browser</title>
-  <meta name="description" content="Modern visual Hacker News browser with endless scrolling">
+  <title>Reddit Scroller — Visual Reddit Browser</title>
+  <meta name="description" content="Modern visual Reddit browser with endless scrolling">
   <style>
     /* ==========================================
-       HACKER NEWS SCROLLER — Modern Visual Browser
+       REDDIT SCROLLER — Modern Visual Browser
        ========================================== */
 
     /* --- CSS Variables & Theme System --- */
@@ -1038,7 +1038,7 @@
           const data = post.data || post;
           const url = data.url || '';
 
-          // For Hacker News, only return URLs that are likely images
+          // For Reddit, only return URLs that are likely images
           // Check if URL ends with image extension or is from an image host
           if (url) {
             const lowerUrl = url.toLowerCase();
@@ -1064,7 +1064,7 @@
       const data = post.data || post;
       const url = (data.url || '').toLowerCase();
 
-      // For Hacker News, only return 'image' for actual image URLs
+      // For Reddit, only return 'image' for actual image URLs
       const imageExtensions = ['.jpg', '.jpeg', '.png', '.gif', '.webp', '.bmp', '.svg'];
       const imageHosts = ['imgur.com', 'flickr.com', 'photobucket.com', 'tinypic.com', 'img.ly', 'goo.gl'];
 
@@ -1158,12 +1158,12 @@
     // =========================================
     const FeedFetcher = {
       /**`
-       * Fetch posts from Hacker News API (CORS-friendly)
+       * Fetch posts from Reddit API (CORS-friendly)
        */
       async fetchPosts(subreddit, sort, after = null, nsfw = false) {
-        console.log('[Hacker News] fetchPosts called:', { subreddit, sort, after });
+        console.log('[Reddit] fetchPosts called:', { subreddit, sort, after });
         
-        // Map sort to Hacker News endpoint
+        // Map sort to Reddit endpoint
         // ForHN: hn-sort maps directly to hn-api endpoints
         let endpoint = 'new';
         if (sort === 'top') {
@@ -1184,7 +1184,7 @@
         
         // Get story IDs from the endpoint
         let url = `https://hacker-news.firebaseio.com/v0/${endpoint}stories.json`;
-        console.log('[Hacker News] Fetching:', url);
+        console.log('[Reddit] Fetching:', url);
         
         try {
           const response = await fetch(url, {
@@ -1326,8 +1326,8 @@
         const title = formatTitle(post);
         const isHackerNews = !data.subreddit;
         const subreddit = isHackerNews ? 'news' : (data.subreddit || 'unknown');
-        // For Hacker News, use the story URL as both media and source
-        // For Reddit, use the permalink
+        // For Hacker News stories, use the item URL
+        // For Hacker News, use the permalink
         const postUrl = isHackerNews 
           ? (data.url ? `https://news.ycombinator.com/item?id=${data.id}` : `https://news.ycombinator.com`)
           : `https://www.reddit.com${data.permalink}`;
