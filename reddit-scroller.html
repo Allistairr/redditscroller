@@ -347,6 +347,92 @@
       color: white;
     }
 
+    /* CORS Warning Overlay */
+    .cors-warning {
+      position: fixed;
+      top: 0;
+      left: 0;
+      right: 0;
+      bottom: 0;
+      background: rgba(0, 0, 0, 0.85);
+      z-index: 10000;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      padding: 20px;
+      animation: fadeIn 0.3s ease-out;
+    }
+
+    .cors-warning-content {
+      background: var(--card-bg);
+      border-radius: 12px;
+      padding: 30px;
+      max-width: 600px;
+      width: 100%;
+      box-shadow: 0 8px 32px rgba(0, 0, 0, 0.3);
+      border: 1px solid var(--border-color);
+    }
+
+    .cors-warning-content h3 {
+      color: var(--text-primary);
+      margin: 0 0 15px 0;
+      display: flex;
+      align-items: center;
+      gap: 10px;
+    }
+
+    .cors-warning-content p {
+      color: var(--text-secondary);
+      margin: 0 0 20px 0;
+      line-height: 1.6;
+    }
+
+    .cors-warning-content ul {
+      margin: 0 0 25px 0;
+      padding-left: 25px;
+    }
+
+    .cors-warning-content li {
+      color: var(--text-secondary);
+      margin-bottom: 10px;
+      line-height: 1.5;
+    }
+
+    .cors-warning-content li a {
+      color: var(--accent);
+      text-decoration: none;
+    }
+
+    .cors-warning-content li a:hover {
+      text-decoration: underline;
+    }
+
+    .cors-warning-content code {
+      background: var(--bg-secondary);
+      padding: 2px 6px;
+      border-radius: 4px;
+      font-family: monospace;
+      font-size: 13px;
+      color: var(--accent);
+    }
+
+    .cors-warning-content button {
+      background: var(--accent);
+      color: white;
+      border: none;
+      padding: 12px 24px;
+      border-radius: 6px;
+      font-size: 14px;
+      font-weight: 600;
+      cursor: pointer;
+      transition: background 0.2s;
+      width: 100%;
+    }
+
+    .cors-warning-content button:hover {
+      background: var(--accent-hover);
+    }
+
     .badge-video {
       background: #1a73e8;
       color: white;
@@ -1871,9 +1957,45 @@
       }
     };
 
+    // Show CORS warning if feed fails to load
+    const showCORSWarning = () => {
+      // Only show warning once
+      if (localStorage.getItem('reddit-scroller-cors-warning-shown')) return;
+      
+      const warningDiv = document.createElement('div');
+      warningDiv.id = 'corsWarning';
+      warningDiv.className = 'cors-warning';
+      warningDiv.innerHTML = `
+        <div class="cors-warning-content">
+          <h3>⚠️ CORS Issue Detected</h3>
+          <p>Reddit's API blocks direct browser requests. To use this app, you have a few options:</p>
+          <ul>
+            <li><strong>Install a CORS extension:</strong> <a href="https://chrome.google.com/webstore/detail/cors-everywhere/kbkmbpiekjpdkghmdfjelcjeheobdgkk" target="_blank">CORS Everywhere</a> (Chrome/Edge)</li>
+            <li><strong>Use a local server:</strong> Run <code>python3 -m http.server 8000</code> and visit http://localhost:8000</li>
+            <li><strong>Configure a proxy:</strong> Edit this file and set a working proxy URL in the <code>proxy</code> variable</li>
+          </ul>
+          <button id="corsWarningClose">OK</button>
+        </div>
+      `;
+      document.body.appendChild(warningDiv);
+      
+      document.getElementById('corsWarningClose').addEventListener('click', () => {
+        document.body.removeChild(warningDiv);
+        localStorage.setItem('reddit-scroller-cors-warning-shown', 'true');
+      });
+    };
+
     // Initialize app when DOM is ready
     if (document.readyState === 'loading') {
-      document.addEventListener('DOMContentLoaded', () => App.init());
+      document.addEventListener('DOMContentLoaded', () => {
+        App.init();
+        // Check if we need to show CORS warning after initial load attempt
+        setTimeout(() => {
+          if (AppState.posts.length === 0 && !AppState.loading) {
+            showCORSWarning();
+          }
+        }, 5000);
+      });
     } else {
       App.init();
     }
