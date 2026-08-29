@@ -822,9 +822,9 @@
       systemPrefersDark: window.matchMedia('(prefers-color-scheme: dark)').matches,
       
       // Proxy configuration (set to null to disable proxy)
-      // Using AllOrigins as default CORS proxy (https://allorigins.win)
+      // Using corsproxy.com for CORS access to Reddit API
       // This allows the app to work when opened directly in a browser
-      proxy: 'https://api.allorigins.win/get?url=',
+      proxy: 'https://www.corsproxy.com/?',
       
       // For debouncing
       resizeTimeout: null,
