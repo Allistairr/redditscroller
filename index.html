@@ -235,7 +235,7 @@
     /* Masonry Grid */
     .masonry-grid {
       display: grid;
-      grid-template-columns: repeat(auto-fill, minmax(280px, 1fr));
+      grid-template-columns: repeat(var(--columns, 3), minmax(200px, 1fr));
       grid-auto-rows: 10px;
       gap: 12px;
       padding-bottom: 20px;
@@ -779,6 +779,16 @@
         </select>
       </div>
 
+      <div class="control-group">
+        <span class="control-label">Columns</span>
+        <select id="columnsSelect" class="sort-select" aria-label="Number of columns">
+          <option value="2">2</option>
+          <option value="3" selected>3</option>
+          <option value="4">4</option>
+          <option value="5">5</option>
+        </select>
+      </div>
+
       <button id="themeToggle" class="theme-toggle" aria-label="Toggle theme" title="Toggle light/dark theme">
         <svg viewBox="0 0 24 24">
           <path d="M12 3c.132 0 .263 0 .393 0a7.5 7.5 0 0 0 7.92 12.446a9 9 0 1 1 -8.313 -12.454z" />
@@ -892,6 +902,7 @@
       sort: 'hot',
       nsfw: false,
       theme: 'system', // 'light', 'dark', 'system'
+      columns: 3, // Number of columns in the grid
       
       // Feed state
       posts: [],
@@ -924,6 +935,7 @@
       // Inputs
       subredditInput: document.getElementById('subredditInput'),
       sortSelect: document.getElementById('sortSelect'),
+      columnsSelect: document.getElementById('columnsSelect'),
       nsfwCheckbox: document.getElementById('nsfwCheckbox'),
       loadBtn: document.getElementById('loadBtn'),
       themeToggle: document.getElementById('themeToggle'),
@@ -985,6 +997,9 @@
       if (AppState.sort !== 'hot') {
         parts.push(`sort=${AppState.sort}`);
       }
+      if (AppState.columns !== 3) {
+        parts.push(`columns=${AppState.columns}`);
+      }
       if (AppState.nsfw) {
         parts.push('nsfw=1');
       }
@@ -1022,12 +1037,23 @@
         function getMediaUrl(post) {
           const data = post.data || post;
           const url = data.url || '';
-      
-          // For Hacker News, return the URL directly (could be image or article)
+
+          // For Hacker News, only return URLs that are likely images
+          // Check if URL ends with image extension or is from an image host
           if (url) {
-            return url;
+            const lowerUrl = url.toLowerCase();
+            const imageExtensions = ['.jpg', '.jpeg', '.png', '.gif', '.webp', '.bmp', '.svg'];
+            const imageHosts = ['imgur.com', 'flickr.com', 'photobucket.com', 'tinypic.com', 'img.ly', 'goo.gl'];
+
+            // Check if it's an image URL
+            const hasImageExtension = imageExtensions.some(ext => lowerUrl.endsWith(ext));
+            const isImageHost = imageHosts.some(host => lowerUrl.includes(host));
+
+            if (hasImageExtension || isImageHost) {
+              return url;
+            }
           }
-      
+
           return null;
         }
 
@@ -1037,9 +1063,19 @@
     function getMediaType(post) {
       const data = post.data || post;
       const url = (data.url || '').toLowerCase();
-      
-      // For Hacker News, return 'image' for all URLs (media rendering is handled by browser)
-      return 'image';
+
+      // For Hacker News, only return 'image' for actual image URLs
+      const imageExtensions = ['.jpg', '.jpeg', '.png', '.gif', '.webp', '.bmp', '.svg'];
+      const imageHosts = ['imgur.com', 'flickr.com', 'photobucket.com', 'tinypic.com', 'img.ly', 'goo.gl'];
+
+      const hasImageExtension = imageExtensions.some(ext => url.endsWith(ext));
+      const isImageHost = imageHosts.some(host => url.includes(host));
+
+      if (hasImageExtension || isImageHost) {
+        return 'image';
+      }
+
+      return null; // Don't render non-image URLs
     }
 
     /**
@@ -1778,10 +1814,13 @@
         InfiniteScroll.init();
         Lightbox.init();
         ResizeHandler.init();
-        
+
+        // Set initial column display
+        this.updateColumnDisplay();
+
         // Initial load
         this.loadFeed(true);
-        
+
         console.log('Reddit Scroller initialized');
       },
       
@@ -1805,7 +1844,13 @@
           updateUrlState();
           this.loadFeed(true);
         });
-        
+
+        // Columns select
+        DOM.columnsSelect.addEventListener('change', (e) => {
+          AppState.columns = parseInt(e.target.value, 10);
+          this.updateColumnDisplay();
+        });
+
         // Subreddit input enter key
         DOM.subredditInput.addEventListener('keypress', (e) => {
           if (e.key === 'Enter') {
@@ -1835,21 +1880,26 @@
         const hashParts = hash.split('?');
         const subredditHash = hashParts[0].replace(/^r\//, '');
         const params = new URLSearchParams(hashParts[1]);
-        
+
         // Check search params too
         const searchParams = new URLSearchParams(window.location.search);
-        
+
         // Subreddit
         let subreddit = searchParams.get('r') || subredditHash || 'all';
         if (subreddit.startsWith('/')) subreddit = subreddit.substring(1);
         AppState.subreddit = subreddit;
         DOM.subredditInput.value = subreddit;
-        
+
         // Sort
         const sort = searchParams.get('sort') || params.get('sort') || 'hot';
         AppState.sort = sort;
         DOM.sortSelect.value = sort;
-        
+
+        // Columns
+        const columns = searchParams.get('columns') || params.get('columns') || '3';
+        AppState.columns = parseInt(columns, 10);
+        DOM.columnsSelect.value = AppState.columns;
+
         // NSFW
         const nsfw = searchParams.get('nsfw') || params.get('nsfw');
         AppState.nsfw = nsfw === '1' || nsfw === 'true' || nsfw === true;
@@ -1955,7 +2005,15 @@
             DOM.mainContent.scrollTop = 0;
           }
         });
-      }
+      },
+
+      /**
+       * Update column display based on AppState.columns
+       */
+      updateColumnDisplay() {
+        document.documentElement.style.setProperty('--columns', AppState.columns);
+      },
+
     };
 
     // Show CORS warning if feed fails to load
