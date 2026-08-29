@@ -13,23 +13,23 @@ A modern, visual Reddit browser that displays posts as tiles in an endless-scrol
 - **Dark/Light Theme** - Automatic system preference detection with manual toggle
 - **Shareable URLs** - Hash-based URL state for easy sharing
 
-## Usage
+## Quick Start
 
-1. Open `reddit-scroller.html` in a web browser
-2. The app defaults to `/r/all` with NSFW disabled
-3. Use the top bar to change subreddits, sort order, or enable NSFW
-4. Click any post to view in fullscreen lightbox
-5. Use `Arrow Left` / `Arrow Right` to navigate in lightbox
-6. Press `Escape` to close lightbox
+### Method 1: Using the Proxy Server (Recommended - Works without CORS issues)
 
-## CORS / Feed Access
+```bash
+# Install Node.js if you don't have it
+node proxy-server.js
+```
 
-**Important:** Reddit's API blocks direct browser requests due to CORS policies. To use this app, you have a few options:
+Then open `http://localhost:3000` in your browser.
 
-### Option 1: Use a CORS Extension (Easiest for testing)
-Install a CORS extension like [CORS Everywhere](https://chrome.google.com/webstore/detail/cors-everywhere/kbkmbpiekjpdkghmdfjelcjeheobdgkk) in your browser.
+### Method 2: CORS Extension (Quick testing)
 
-### Option 2: Run a Local Server
+Install [CORS Everywhere](https://chrome.google.com/webstore/detail/cors-everywhere/kbkmbpiekjpdkghmdfjelcjeheobdgkk) extension in Chrome/Edge.
+
+### Method 3: Local HTTP Server
+
 ```bash
 # Python 3
 python3 -m http.server 8000
@@ -43,18 +43,33 @@ php -S localhost:8000
 
 Then visit `http://localhost:8000/reddit-scroller.html`
 
-### Option 3: Use a Proxy Server
-Configure a proxy in the app's JavaScript (lines 825-827):
-```javascript
-proxy: 'https://your-proxy-server.com/?url=',
-```
+### Method 4: Direct File (Limited)
+
+If you open `reddit-scroller.html` directly with `file://`, Reddit's CORS policy will block the feed. In this case, you'll see a warning in the app with instructions.
+
+## Usage
+
+1. The app defaults to `/r/all` with NSFW disabled
+2. Use the top bar to change subreddits, sort order, or enable NSFW
+3. Click any post to view in fullscreen lightbox
+4. Use `Arrow Left` / `Arrow Right` to navigate in lightbox
+5. Press `Escape` to close lightbox
+6. Use `Arrow Up` / `Arrow Down` to scroll the feed
+7. Press `N` to open lightbox on the first visible post
+
+## Subreddit Switching
+
+Type a subreddit name (without the `/r/` prefix) and press Enter, or click a post's subreddit link.
+
+Examples: `politics`, `technology`, `pics`, `AskReddit`
 
 ## Configuration
 
-The app is configured via JavaScript variables in the `<script>` section:
+The app is configured via JavaScript variables at the top of the `<script>` section:
 
 ```javascript
 // Proxy configuration (set to null to disable proxy)
+// Using a local proxy server is recommended for reliable operation
 proxy: 'https://www.corsproxy.com/?',
 
 // Default subreddit
@@ -72,6 +87,16 @@ defaultNsfw: false,
 - Pure HTML5, CSS3, Vanilla JavaScript
 - No external dependencies or build tools
 - Uses Reddit's JSON API (`https://www.reddit.com/r/{subreddit}/{sort}.json`)
+
+## CORS Proxy Setup
+
+Reddit's API blocks direct browser requests due to CORS policies. The `proxy-server.js` file included in this repository provides a simple Node.js server that:
+
+1. Serves the HTML file from this directory
+2. Proxies Reddit API requests through the server (bypassing CORS)
+3. Returns proper JSON responses with CORS headers enabled
+
+Run with: `node proxy-server.js`
 
 ## License
 
