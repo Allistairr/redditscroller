@@ -1049,8 +1049,9 @@
             const isImageHost = imageHosts.some(host => lowerUrl.includes(host));
 
             if (hasImageExtension || isImageHost) {
-              // Return proxied URL to avoid CORS issues
-              return `https://images.weserv.nl/?url=${encodeURIComponent(url)}&w=600&fit=cover`;
+              // Return the image URL directly
+              // Most image hosts (imgur, flickr, etc.) allow CORS or work via data: URLs
+              return url;
             }
           }
 
