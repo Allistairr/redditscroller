@@ -1175,16 +1175,13 @@
         console.log('[Reddit] Fetching:', url);
         
         try {
-          // Fetch with Reddit user agent header
-          // The User-Agent header is required by Reddit API
-          // Use no-cors mode to handle CORS issues
-          const response = await fetch(url, {
+          // Use a CORS proxy to fetch Reddit API data
+          // allorigins.win wraps the response with proper CORS headers
+          const proxyUrl = 'https://api.allorigins.win/get?url=';
+          const fullUrl = proxyUrl + encodeURIComponent(url);
+          
+          const response = await fetch(fullUrl, {
             method: 'GET',
-            headers: {
-              'User-Agent': 'RedditScroller/1.0',
-              'Accept': 'application/json'
-            },
-            mode: 'cors',
             cache: 'no-cache',
             referrerPolicy: 'no-referrer'
           });
@@ -1195,12 +1192,14 @@
             throw new Error(`HTTP ${response.status}: ${response.statusText}`);
           }
           
+          // allorigins.win returns { contents: JSON string }
           const data = await response.json();
-          console.log('[Reddit] Response data:', data);
+          const parsedData = JSON.parse(data.contents);
+          console.log('[Reddit] Response data:', parsedData);
           
           // Parse Reddit API response
           // Reddit returns { data: { children: [ { data: post } ] } }
-          const posts = data.data.children
+          const posts = parsedData.data.children
             .filter(item => item && item.data && item.data.url)
             .map(item => item.data)
             .filter(post => nsfw || !post.over_18);
@@ -1208,7 +1207,7 @@
           console.log('[Reddit] Posts found:', posts.length);
           
           // Generate 'after' token for pagination
-          const newAfter = data.data.after || null;
+          const newAfter = parsedData.data.after || null;
           
           return {
             posts,
