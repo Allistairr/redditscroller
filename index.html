@@ -1176,8 +1176,8 @@
         
         try {
           // Use a CORS proxy to fetch Reddit API data
-          // allorigins.win wraps the response with proper CORS headers
-          const proxyUrl = 'https://api.allorigins.win/get?url=';
+          // corsproxy.io provides a simple way to fetch external URLs
+          const proxyUrl = 'https://corsproxy.io/?';
           const fullUrl = proxyUrl + encodeURIComponent(url);
           
           const response = await fetch(fullUrl, {
@@ -1192,14 +1192,13 @@
             throw new Error(`HTTP ${response.status}: ${response.statusText}`);
           }
           
-          // allorigins.win returns { contents: JSON string }
+          // corsproxy.io returns the actual API response directly
           const data = await response.json();
-          const parsedData = JSON.parse(data.contents);
-          console.log('[Reddit] Response data:', parsedData);
+          console.log('[Reddit] Response data:', data);
           
           // Parse Reddit API response
           // Reddit returns { data: { children: [ { data: post } ] } }
-          const posts = parsedData.data.children
+          const posts = data.data.children
             .filter(item => item && item.data && item.data.url)
             .map(item => item.data)
             .filter(post => nsfw || !post.over_18);
@@ -1207,7 +1206,7 @@
           console.log('[Reddit] Posts found:', posts.length);
           
           // Generate 'after' token for pagination
-          const newAfter = parsedData.data.after || null;
+          const newAfter = data.data.after || null;
           
           return {
             posts,
