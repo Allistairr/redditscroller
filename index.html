@@ -1176,7 +1176,8 @@
         
         try {
           // Fetch with Reddit user agent header
-          // Using no-cors mode to handle CORS issues
+          // The User-Agent header is required by Reddit API
+          // Use no-cors mode to handle CORS issues
           const response = await fetch(url, {
             method: 'GET',
             headers: {
@@ -1184,7 +1185,8 @@
               'Accept': 'application/json'
             },
             mode: 'cors',
-            cache: 'no-cache'
+            cache: 'no-cache',
+            referrerPolicy: 'no-referrer'
           });
           
           console.log('[Reddit] Response status:', response.status, response.statusText);
