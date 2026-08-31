@@ -1190,6 +1190,7 @@
           const data = await response.json();
           
           // Parse Reddit API response
+          // Reddit returns { data: { children: [ { data: post } ] } }
           const posts = data.data.children
             .filter(item => item && item.data && item.data.url)
             .map(item => item.data)
