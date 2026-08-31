@@ -832,11 +832,6 @@
       // Theme detection
       systemPrefersDark: window.matchMedia('(prefers-color-scheme: dark)').matches,
       
-      // Proxy configuration
-      // Using local proxy server to avoid CORS issues with Reddit API
-      // Run: node server.js, then visit http://localhost:3000
-      proxy: null, // Set to 'http://localhost:3000/api/' to use local proxy
-      
       // For debouncing
       resizeTimeout: null,
       scrollTimeout: null
@@ -933,44 +928,95 @@
     function hasMedia(post) {
       const data = post.data || post;
       const url = data.url || '';
-      const selftext = data.selftext || '';
       
-      // Check for media types
-      const isImage = /\.(png|jpg|jpeg|gif|webp|bmp|svg)$/i.test(url);
-      const isVideo = /\.(mp4|webm|mov)$/i.test(url);
-      const isGif = /\.(gif)$/i.test(url) || (url.includes('gifv') || url.includes('redditmedia.com') && url.includes('.gif'));
-      const isGallery = url.includes('gallery'); // Reddit gallery
-      const isRedditMedia = url.includes('reddit.com/media');
+      if (!url) return false;
       
-      return isImage || isVideo || isGif || isGallery || isRedditMedia;
+      const lowerUrl = url.toLowerCase();
+      
+      // Check for image extensions
+      const hasImageExtension = /\.(png|jpg|jpeg|gif|webp|bmp|svg)$/i.test(lowerUrl);
+      
+      // Check for video extensions
+      const hasVideoExtension = /\.(mp4|webm|mov)$/i.test(lowerUrl);
+      
+      // Check for GIF
+      const isGif = /\.(gif)$/i.test(lowerUrl) || lowerUrl.includes('gifv');
+      
+      // Check for gallery
+      const isGallery = lowerUrl.includes('/gallery/');
+      
+      // Check for Reddit media (i.redd.it, imgur on Reddit, etc.)
+      const isRedditMedia = lowerUrl.includes('reddit.com/media') || 
+                           lowerUrl.includes('i.redd.it') ||
+                           lowerUrl.includes('redditmedia.com');
+      
+      return hasImageExtension || hasVideoExtension || isGif || isGallery || isRedditMedia;
     }
 
     /**
-         * Extract media URL from a post
-         */
-        function getMediaUrl(post) {
-          const data = post.data || post;
-          const url = data.url || '';
+     * Extract media URL from a post
+     */
+    function getMediaUrl(post) {
+      const data = post.data || post;
+      const url = data.url || '';
 
-          // Check if URL ends with image extension or is from an image host
-          if (url) {
-            const lowerUrl = url.toLowerCase();
-            const imageExtensions = ['.jpg', '.jpeg', '.png', '.gif', '.webp', '.bmp', '.svg'];
-            const imageHosts = ['imgur.com', 'flickr.com', 'photobucket.com', 'tinypic.com', 'img.ly', 'goo.gl', 'i.imgur.com'];
+      if (!url) return null;
 
-            // Check if it's an image URL
-            const hasImageExtension = imageExtensions.some(ext => lowerUrl.endsWith(ext));
-            const isImageHost = imageHosts.some(host => lowerUrl.includes(host));
+      const lowerUrl = url.toLowerCase();
 
-            if (hasImageExtension || isImageHost) {
-              // Return the image URL directly
-              // Most image hosts (imgur, flickr, etc.) allow CORS or work via data: URLs
-              return url;
-            }
-          }
-
-          return null;
+      // Handle Reddit-hosted images
+      if (url.includes('reddit.com')) {
+        // Handle imgur.com hosted images on Reddit (common pattern)
+        if (lowerUrl.includes('imgur.com')) {
+          // Imgur image
+          return url;
         }
+        // Handle direct image links on Reddit
+        if (lowerUrl.includes('.jpg') || lowerUrl.includes('.jpeg') || 
+            lowerUrl.includes('.png') || lowerUrl.includes('.gif') || 
+            lowerUrl.includes('.webp')) {
+          return url;
+        }
+        // Handle Reddit media (i.redd.it)
+        if (lowerUrl.includes('i.redd.it') || lowerUrl.includes('redditmedia.com')) {
+          return url;
+        }
+        // Handle gallery posts
+        if (lowerUrl.includes('/gallery/')) {
+          // For gallery, return the first image if available
+          return null; // Gallery needs special handling
+        }
+        // HandleReddit image posts (posts where the URL is the image itself)
+        if (lowerUrl.includes('reddit.com/') && 
+            (lowerUrl.includes('.jpg') || lowerUrl.includes('.png') || 
+             lowerUrl.includes('.jpeg') || lowerUrl.includes('.gif'))) {
+          return url;
+        }
+      }
+
+      // Check if it's an image URL from any host
+      const imageExtensions = ['.jpg', '.jpeg', '.png', '.gif', '.webp', '.bmp', '.svg'];
+      const hasImageExtension = imageExtensions.some(ext => lowerUrl.endsWith(ext));
+      
+      if (hasImageExtension) {
+        return url;
+      }
+
+      // Handle Imgur
+      if (lowerUrl.includes('imgur.com')) {
+        return url;
+      }
+
+      // Handle other image hosts
+      const imageHosts = ['flickr.com', 'photobucket.com', 'tinypic.com', 'img.ly', 'goo.gl', 'i.imgur.com'];
+      const isImageHost = imageHosts.some(host => lowerUrl.includes(host));
+      
+      if (isImageHost) {
+        return url;
+      }
+
+      return null;
+    }
 
     /**
      * Determine media type
@@ -979,17 +1025,52 @@
       const data = post.data || post;
       const url = (data.url || '').toLowerCase();
 
-      // For Reddit, only return 'image' for actual image URLs
+      if (!url) return null;
+
+      // Check for image extensions
       const imageExtensions = ['.jpg', '.jpeg', '.png', '.gif', '.webp', '.bmp', '.svg'];
-      const imageHosts = ['imgur.com', 'flickr.com', 'photobucket.com', 'tinypic.com', 'img.ly', 'goo.gl'];
-
       const hasImageExtension = imageExtensions.some(ext => url.endsWith(ext));
-      const isImageHost = imageHosts.some(host => url.includes(host));
-
-      if (hasImageExtension || isImageHost) {
+      
+      // Check for video extensions
+      const videoExtensions = ['.mp4', '.webm', '.mov'];
+      const hasVideoExtension = videoExtensions.some(ext => url.endsWith(ext));
+      
+      // Check for GIF
+      const isGif = url.endsWith('.gif') || url.includes('gifv');
+      
+      // Check for gallery
+      const isGallery = url.includes('/gallery/');
+      
+      // Check for Reddit media
+      const isRedditMedia = url.includes('reddit.com/media') || 
+                           url.includes('i.redd.it') ||
+                           url.includes('redditmedia.com');
+      
+      // Return the appropriate media type
+      if (hasImageExtension || isRedditMedia) {
         return 'image';
       }
-
+      
+      if (hasVideoExtension) {
+        return 'video';
+      }
+      
+      if (isGif) {
+        return 'gif';
+      }
+      
+      if (isGallery) {
+        return 'gallery';
+      }
+      
+      // Fallback: check common image hosts
+      const imageHosts = ['imgur.com', 'flickr.com', 'photobucket.com', 'tinypic.com', 'img.ly', 'goo.gl', 'i.imgur.com'];
+      const isImageHost = imageHosts.some(host => url.includes(host));
+      
+      if (isImageHost) {
+        return 'image';
+      }
+      
       return null; // Don't render non-image URLs
     }
 
@@ -1072,36 +1153,29 @@
     // FEED FETCHING
     // =========================================
     const FeedFetcher = {
-      /**`
+      /**
        * Fetch posts from Reddit API (CORS-friendly)
        */
       async fetchPosts(subreddit, sort, after = null, nsfw = false) {
         console.log('[Reddit] fetchPosts called:', { subreddit, sort, after });
         
-        // Map sort to Reddit endpoint
-        // ForHN: hn-sort maps directly to hn-api endpoints
-        let endpoint = 'new';
-        if (sort === 'top') {
-          endpoint = 'top';
-        } else if (sort === 'best') {
-          endpoint = 'best';
+        // Remove /r/ prefix if present
+        if (subreddit.startsWith('/r/')) {
+          subreddit = subreddit.substring(3);
         }
         
-        // For 'hot' - use new (HN doesn't have true hot, new is closest)
-        if (sort === 'hot') {
-          endpoint = 'new';
+        // Build Reddit API URL
+        let url = `https://www.reddit.com/r/${subreddit}/${sort}.json`;
+        
+        // Add pagination parameter if present
+        if (after) {
+          url += `?after=${after}`;
         }
         
-        // For 'rising' - use new with time filter (approximate)
-        if (sort === 'rising') {
-          endpoint = 'new';
-        }
-        
-        // Get story IDs from the endpoint
-        let url = `https://hacker-news.firebaseio.com/v0/${endpoint}stories.json`;
         console.log('[Reddit] Fetching:', url);
         
         try {
+          // Fetch with Reddit user agent header
           const response = await fetch(url, {
             method: 'GET',
             headers: {
@@ -1113,37 +1187,16 @@
             throw new Error(`HTTP ${response.status}: ${response.statusText}`);
           }
           
-          const storyIds = await response.json();
+          const data = await response.json();
           
-          // Get full story details for the first 25 stories
-          const limit = 25;
-          const storiesToFetch = storyIds.slice(0, limit);
-          
-          // Fetch story details in parallel
-          const storyPromises = storiesToFetch.map(id => 
-            fetch(`https://hacker-news.firebaseio.com/v0/item/${id}.json`)
-              .then(res => res.json())
-              .catch(() => null)
-          );
-          
-          const posts = (await Promise.all(storyPromises))
-            .filter(post => post && post.type === 'story' && post.url)
-            .map(post => ({
-              data: {
-                title: post.title || 'No title',
-                url: post.url,
-                domain: this.extractDomain(post.url),
-                score: post.score || 0,
-                comments: post.descendants || 0,
-                author: post.by || 'anonymous',
-                created: post.time || 0,
-                id: post.id || '',
-                type: 'story'
-              }
-            }));
+          // Parse Reddit API response
+          const posts = data.data.children
+            .filter(item => item && item.data && item.data.url)
+            .map(item => item.data)
+            .filter(post => nsfw || !post.over_18);
           
           // Generate 'after' token for pagination
-          const newAfter = storyIds[storiesToFetch.length - 1] || null;
+          const newAfter = data.data.after || null;
           
           return {
             posts,
@@ -1162,7 +1215,7 @@
           const parsed = new URL(url);
           return parsed.hostname.replace('www.', '');
         } catch {
-          return 'hackernews';
+          return 'unknown';
         }
       },
       
