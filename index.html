@@ -1183,11 +1183,14 @@
             }
           });
           
+          console.log('[Reddit] Response status:', response.status, response.statusText);
+          
           if (!response.ok) {
             throw new Error(`HTTP ${response.status}: ${response.statusText}`);
           }
           
           const data = await response.json();
+          console.log('[Reddit] Response data:', data);
           
           // Parse Reddit API response
           // Reddit returns { data: { children: [ { data: post } ] } }
@@ -1195,6 +1198,8 @@
             .filter(item => item && item.data && item.data.url)
             .map(item => item.data)
             .filter(post => nsfw || !post.over_18);
+          
+          console.log('[Reddit] Posts found:', posts.length);
           
           // Generate 'after' token for pagination
           const newAfter = data.data.after || null;
@@ -1204,7 +1209,7 @@
             after: newAfter
           };
         } catch (error) {
-          console.error('Feed fetch error:', error);
+          console.error('[Reddit] Feed fetch error:', error);
           this.handleFetchError(error);
           return { posts: [], after: null };
         }
@@ -1229,11 +1234,14 @@
         if (error.message.includes('403')) {
           message = '403 Forbidden - Access denied';
         } else if (error.message.includes('404')) {
-          message = 'Resource not found';
+          message = 'Subreddit not found or private';
         } else if (error.message.includes('NetworkError')) {
           message = 'Network error - Check your connection';
         } else if (error.message.includes('JSON')) {
           message = 'Could not parse feed data';
+        } else {
+          // Show the actual error message for debugging
+          message = error.message || 'Unknown error';
         }
         
         DOM.statusText.textContent = message;
