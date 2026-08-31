@@ -1183,7 +1183,10 @@
           const response = await fetch(fullUrl, {
             method: 'GET',
             cache: 'no-cache',
-            referrerPolicy: 'no-referrer'
+            referrerPolicy: 'no-referrer',
+            headers: {
+              'User-Agent': 'RedditScroller/1.0'
+            }
           });
           
           console.log('[Reddit] Response status:', response.status, response.statusText);
