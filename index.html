@@ -1166,7 +1166,8 @@
       list: [
         // Same-origin backend relay (Caddy reverse proxy). Preferred because it
         // bypasses browser CORS entirely and avoids flaky public proxies.
-        { name: 'caddy-relay',  build: u => `/api/reddit/?u=${encodeURIComponent(u)}` },
+        // URL is relative so it works from any base path (/, /redditscroller/, etc.)
+        { name: 'caddy-relay',  build: u => `api/reddit/?u=${encodeURIComponent(u)}` },
         { name: 'allorigins-raw', build: u => `https://api.allorigins.win/raw?url=${encodeURIComponent(u)}` },
         { name: 'allorigins-get', build: u => `https://api.allorigins.win/get?url=${encodeURIComponent(u)}` },
         { name: 'codetabs',       build: u => `https://api.codetabs.com/v1/proxy?quest=${encodeURIComponent(u)}` },
