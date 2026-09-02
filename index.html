@@ -1152,75 +1152,142 @@
     // =========================================
     // FEED FETCHING
     // =========================================
+    // ==========================================
+    // CORS PROXY RESOLVER
+    // ==========================================
+    // The site is hosted on GitHub Pages with no backend, so it cannot call
+    // Reddit's JSON API directly (CORS). We round-robin through a list of
+    // public CORS proxies and use the first one that returns valid Reddit
+    // JSON. Each is given a hard timeout and we validate the payload shape
+    // (some proxies return Reddit's HTML page instead of JSON), so one bad
+    // proxy no longer breaks the whole app.
+    const RedditProxy = {
+      // Public CORS proxies, tried in order until one returns valid Reddit JSON.
+      list: [
+        // Same-origin backend relay (Caddy reverse proxy). Preferred because it
+        // bypasses browser CORS entirely and avoids flaky public proxies.
+        { name: 'caddy-relay',  build: u => `/api/reddit/?u=${encodeURIComponent(u)}` },
+        { name: 'allorigins-raw', build: u => `https://api.allorigins.win/raw?url=${encodeURIComponent(u)}` },
+        { name: 'allorigins-get', build: u => `https://api.allorigins.win/get?url=${encodeURIComponent(u)}` },
+        { name: 'codetabs',       build: u => `https://api.codetabs.com/v1/proxy?quest=${encodeURIComponent(u)}` },
+        { name: 'corsproxy-io',   build: u => `https://corsproxy.io/?url=${encodeURIComponent(u)}` },
+        { name: 'corsproxy-org',  build: u => `https://corsproxy.org/?url=${encodeURIComponent(u)}` },
+        { name: 'cors-lol',       build: u => `https://api.cors.lol/${encodeURIComponent(u)}` },
+      ],
+
+      /**
+       * Get a user-supplied proxy URL (if any), taking a `?proxy=` query param
+       * or the `reddit-scroller-proxy` localStorage entry. A custom proxy is
+       * expected to be a URL template where %s is replaced by the target URL.
+       * @returns {object|null}
+       */
+      customProvider() {
+        const urlParams = new URLSearchParams(window.location.search);
+        const raw = urlParams.get('proxy') || localStorage.getItem('reddit-scroller-proxy') || null;
+        if (!raw) return null;
+        const template = raw.trim();
+        if (!template) return null;
+        return {
+          name: 'custom',
+          build: u => template.includes('%s') ? template.replace('%s', encodeURIComponent(u)) : template + u
+        };
+      },
+
+      /**
+       * Try each provider until one returns valid Reddit JSON. A custom user
+       * proxy (if configured) is tried first.
+       * @returns {Promise<{parsed: object, provider: string}>}
+       * @throws Error if every provider fails
+       */
+      async fetchJson(url, { timeoutMs = 12000 } = {}) {
+        const errors = [];
+        const providers = [];
+        const custom = this.customProvider();
+        if (custom) providers.push(custom);
+        providers.push(...this.list);
+        for (const provider of providers) {
+          const controller = new AbortController();
+          const timer = setTimeout(() => controller.abort(), timeoutMs);
+          const startedAt = Date.now();
+          try {
+            const response = await fetch(provider.build(url), {
+              method: 'GET',
+              cache: 'no-cache',
+              referrerPolicy: 'no-referrer',
+              signal: controller.signal,
+              headers: { 'Accept': 'application/json' }
+            });
+
+            if (!response.ok) {
+              errors.push(`${provider.name}: HTTP ${response.status}`);
+              continue;
+            }
+
+            const text = await response.text();
+            let parsed = null;
+            try { parsed = JSON.parse(text); } catch (e) { parsed = null; }
+
+            // allorigins /get?url= wraps the body as { contents: "<json>" }
+            if (parsed && typeof parsed.contents === 'string') {
+              try { parsed = JSON.parse(parsed.contents); } catch (e) { parsed = null; }
+            }
+
+            // Validate it is what we asked Reddit for
+            if (parsed && parsed.data && Array.isArray(parsed.data.children)) {
+              console.log(`[Reddit] OK via ${provider.name} in ${Date.now() - startedAt}ms`);
+              return { parsed, provider: provider.name };
+            }
+
+            errors.push(`${provider.name}: not reddit json`);
+          } catch (e) {
+            errors.push(`${provider.name}: ${e.name === 'AbortError' ? 'timeout' : e.message}`);
+          } finally {
+            clearTimeout(timer);
+          }
+        }
+        throw new Error('All CORS proxies failed. ' + errors.join(' | '));
+      }
+    };
+
     const FeedFetcher = {
       /**
-       * Fetch posts from Reddit API (CORS-friendly)
+       * Fetch posts from Reddit API via a working CORS proxy
        */
       async fetchPosts(subreddit, sort, after = null, nsfw = false) {
-        console.log('[Reddit] fetchPosts called:', { subreddit, sort, after });
-        
         // Remove /r/ prefix if present
-        if (subreddit.startsWith('/r/')) {
+        if (typeof subreddit === 'string' && subreddit.startsWith('/r/')) {
           subreddit = subreddit.substring(3);
         }
-        
-        // Build Reddit API URL
-        let url = `https://www.reddit.com/r/${subreddit}/${sort}.json`;
-        
-        // Add pagination parameter if present
+
+        // Build Reddit API URL (raw_json avoids the new-frontend wrapper)
+        let url = `https://www.reddit.com/r/${subreddit}/${sort}.json?raw_json=1`;
         if (after) {
-          url += `?after=${after}`;
+          url += `&after=${after}`;
         }
-        
-        console.log('[Reddit] Fetching:', url);
-        
+
+        let parsed;
         try {
-          // Use a CORS proxy to fetch Reddit API data
-          // allorigins.win wraps the response with proper CORS headers
-          const proxyUrl = 'https://api.allorigins.win/get?url=';
-          const fullUrl = proxyUrl + encodeURIComponent(url);
-          
-          const response = await fetch(fullUrl, {
-            method: 'GET',
-            cache: 'no-cache',
-            referrerPolicy: 'no-referrer',
-            headers: {
-              'User-Agent': 'RedditScroller/1.0'
-            }
-          });
-          
-          console.log('[Reddit] Response status:', response.status, response.statusText);
-          
-          if (!response.ok) {
-            throw new Error(`HTTP ${response.status}: ${response.statusText}`);
-          }
-          
-          // allorigins.win returns { contents: JSON string }
-          const data = await response.json();
-          const parsedData = JSON.parse(data.contents);
-          console.log('[Reddit] Response data:', parsedData);
-          
-          // Parse Reddit API response
-          // Reddit returns { data: { children: [ { data: post } ] } }
-          const posts = parsedData.data.children
-            .filter(item => item && item.data && item.data.url)
-            .map(item => item.data)
-            .filter(post => nsfw || !post.over_18);
-          
-          console.log('[Reddit] Posts found:', posts.length);
-          
-          // Generate 'after' token for pagination
-          const newAfter = parsedData.data.after || null;
-          
-          return {
-            posts,
-            after: newAfter
-          };
+          const result = await RedditProxy.fetchJson(url);
+          parsed = result.parsed;
         } catch (error) {
           console.error('[Reddit] Feed fetch error:', error);
           this.handleFetchError(error);
           return { posts: [], after: null };
         }
+
+        // Reddit returns { data: { children: [ { data: post } ] } }
+        const posts = parsed.data.children
+          .filter(item => item && item.data && item.data.url)
+          .map(item => item.data)
+          .filter(post => nsfw || !post.over_18);
+
+        // Generate 'after' token for pagination
+        const newAfter = parsed.data.after || null;
+
+        return {
+          posts,
+          after: newAfter
+        };
       },
       
       // Helper to extract domain from URL
@@ -1238,9 +1305,13 @@
        */
       handleFetchError(error) {
         let message = 'Failed to load feed';
-        
-        if (error.message.includes('403')) {
-          message = '403 Forbidden - Access denied';
+
+        if (error.message.includes('All CORS proxies failed')) {
+          message = 'Could not reach Reddit — the built-in relay and public proxies are '
+            + 'unavailable from your network. Add a working proxy via ?proxy=<url>, '
+            + 'or run the Caddy backend so /api/reddit works.';
+        } else if (error.message.includes('403')) {
+          message = '403 Forbidden - Access denied (Reddit is blocking this request)';
         } else if (error.message.includes('404')) {
           message = 'Subreddit not found or private';
         } else if (error.message.includes('NetworkError')) {
@@ -1248,10 +1319,9 @@
         } else if (error.message.includes('JSON')) {
           message = 'Could not parse feed data';
         } else {
-          // Show the actual error message for debugging
           message = error.message || 'Unknown error';
         }
-        
+
         DOM.statusText.textContent = message;
         AppState.loading = false;
         this.showLoading(false);
